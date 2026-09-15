@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Профиль текущего пользователя
+  version: 1.0.0
+  description: >-
+    Проверяет access JWT и активную PostgreSQL-сессию, затем возвращает текущему
+    пользователю всю строку auth.t_users. Идентичность берётся только из
+    проверенного claim sub; данных learner.t_profiles в ответе нет.
+
+paths:
+  /api/v1/profile:
+    get:
+      summary: Получить профиль текущего пользователя
+      operationId: getCurrentUserProfile
+      tags:
+        - profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: >-
+            Access JWT и связанная с ним сессия действительны. Возвращается
+            непосредственно вся строка auth.t_users с camelCase-именами свойств;
+            nullable-колонки остаются null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              example:
+                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                name: ''
+                surname: null
+                email: user@example.com
+                isSuperuser: false
+                createdAt: '2026-08-14T10:00:00Z'
+                updatedAt: null
+                avatarId: null
+                birthday: null
+                gender: null
+                city: null
+                phone: null
+        '401':
+          description: >-
+            UNAUTHORIZED — заголовок отсутствует, длиннее 4096 октетов или не
+            соответствует Bearer-схеме; JWT повреждён, подписан не тем секретом или
+            алгоритмом, имеет отсутствующий либо некорректный sub, sid, jti, exp или
+            aud; access JWT истёк; сессия неизвестна, принадлежит другому пользователю,
+            истекла, имеет legacy expires_at=null либо её нельзя проверить из-за отказа
+            хранилища. Все случаи имеют побайтно одинаковые статус и JSON-тело и не
+            раскрывают причину отказа.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+              example:
+                code: UNAUTHORIZED
+                message: Unauthorized
+                payload: null
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Access JWT в заголовке Authorization: Bearer <token>. Заголовок ограничен
+        4096 октетами. Сервер принимает только HS256 и требует sub, sid, jti как
+        UUID, exp как Unix seconds в диапазоне 1..253402300799 и строковый
+        aud="uwords-api". Токен не считается действительным без активной сессии,
+        прочитанной из PostgreSQL на этом запросе.
+
+  schemas:
+    UserProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - surname
+        - email
+        - isSuperuser
+        - createdAt
+        - updatedAt
+        - avatarId
+        - birthday
+        - gender
+        - city
+        - phone
+      description: >-
+        Полная строка auth.t_users без envelope, данных learner.t_profiles,
+        токенов или полей сессии. Текст сериализуется структурным UTF-8 JSON без
+        нормализации на чтении; метасимволы остаются строковыми данными.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Значение auth.t_users.id; совпадает с проверенным claim sub.
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        name:
+          type: string
+          description: Значение auth.t_users.name, включая допустимую пустую строку.
+          example: Emil
+        surname:
+          type: string
+          nullable: true
+          example: Novikov
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: user@example.com
+        isSuperuser:
+          type: boolean
+          nullable: true
+          description: Значение auth.t_users.is_superuser без вычисления на лету.
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            Значение auth.t_users.created_at в RFC 3339 UTC с суффиксом Z.
+          example: '2026-08-14T10:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            Значение auth.t_users.updated_at в RFC 3339 UTC с суффиксом Z.
+          example: '2026-08-15T11:30:00Z'
+        avatarId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Значение auth.t_users.avatar_id.
+          example: 8e9bf984-7114-42a4-9d29-f43f25ee6e89
+        birthday:
+          type: string
+          format: date
+          nullable: true
+          description: Значение auth.t_users.birthday в формате YYYY-MM-DD.
+          example: '1995-07-23'
+        gender:
+          type: string
+          nullable: true
+          enum:
+            - male
+            - female
+            - null
+          description: Значение auth.t_users.gender.
+          example: male
+        city:
+          type: string
+          nullable: true
+          example: Omsk
+        phone:
+          type: string
+          nullable: true
+          example: '+79991234567'
+
+    UnauthorizedError:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - payload
+      description: >-
+        Единственный внешний auth-отказ. Не содержит причины, JWT, refresh-токена,
+        signing secret, claims, PII, stack trace, SQL, внутренних имён или путей.
+      properties:
+        code:
+          type: string
+          enum:
+            - UNAUTHORIZED
+          example: UNAUTHORIZED
+        message:
+          type: string
+          enum:
+            - Unauthorized
+          example: Unauthorized
+        payload:
+          type: object
+          nullable: true
+          enum:
+            - null
+          description: Всегда JSON null.
+          example: null

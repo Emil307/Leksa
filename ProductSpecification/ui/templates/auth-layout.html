@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uwords — Auth layout template</title>
+  <style>
+    :root { --ink:#0b0712; --panel:#17101f; --text:#f8f6fb; --muted:#aaa2b5; --violet:#6c35f0; --lime:#dfff4f; --telegram:#229ed9; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--ink); color:var(--text); font-family:Inter,Arial,sans-serif; }
+    .stage { min-height:100vh; display:grid; grid-template-columns:1.15fr .85fr; overflow:hidden; position:relative; }
+    .brand, .action { padding:48px clamp(32px,6vw,92px); position:relative; z-index:1; }
+    .action { display:grid; place-items:center; }
+    .panel { width:min(100%,480px); padding:42px; border-radius:32px; background:rgba(23,16,31,.94); border:1px solid rgba(255,255,255,.09); }
+    @media(max-width:700px){ .stage{display:block}.brand{min-height:42vh;padding:28px 22px}.action{margin-top:-24px;padding:0}.panel{border-radius:32px 32px 0 0;min-height:58vh;padding:34px 24px} }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="brand"><!-- brand / word-card composition --></section>
+    <section class="action"><div class="panel"><!-- one screen state --></div></section>
+  </main>
+</body>
+</html>
+

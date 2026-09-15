@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Source: 0001_auth_sessions, 0002_auth_users, 0003_notifications_outbox,
+         which each opened with CREATE SCHEMA IF NOT EXISTS. -->
+
+    <changeSet id="0001-01-schema-auth" author="uwords" dbms="postgresql">
+        <sql>CREATE SCHEMA IF NOT EXISTS auth</sql>
+        <rollback>DROP SCHEMA IF EXISTS auth</rollback>
+    </changeSet>
+
+    <changeSet id="0001-02-schema-notifications" author="uwords" dbms="postgresql">
+        <sql>CREATE SCHEMA IF NOT EXISTS notifications</sql>
+        <rollback>DROP SCHEMA IF EXISTS notifications</rollback>
+    </changeSet>
+
+    <!-- The enum type must exist before auth.t_users, which declares a column of it.
+         Source: 0002_auth_users CREATE_GENDER_TYPE, guarded the same way. -->
+
+    <changeSet id="0001-03-type-user-gender" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT count(*) FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'user_gender' AND n.nspname = 'auth'
+            </sqlCheck>
+        </preConditions>
+        <sql>CREATE TYPE auth.user_gender AS ENUM ('male', 'female')</sql>
+        <rollback>DROP TYPE IF EXISTS auth.user_gender</rollback>
+    </changeSet>
+
+</databaseChangeLog>

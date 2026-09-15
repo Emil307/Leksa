@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Source: 0002_auth_users, settled by 0005_auth_users_email_normalized.
+         created_at and updated_at are deliberately nullable and carry no default
+         here - unlike every other table, this one was created without them. -->
+
+    <changeSet id="0002-01-table-t-users" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists schemaName="auth" tableName="t_users"/></not>
+        </preConditions>
+        <createTable schemaName="auth" tableName="t_users">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="t_users_pkey" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR">
+                <constraints nullable="false"/>
+            </column>
+            <column name="surname" type="VARCHAR"/>
+            <column name="email" type="VARCHAR"/>
+            <column name="is_superuser" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="avatar_id" type="UUID"/>
+            <column name="birthday" type="DATE"/>
+            <column name="gender" type="auth.user_gender"/>
+            <column name="city" type="VARCHAR"/>
+            <column name="phone" type="VARCHAR"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Not a plain UNIQUE on email: the uniqueness is over lower(btrim(email)),
+         so two accounts cannot claim the same address in different casing or with
+         stray whitespace. Expressed as raw SQL because createIndex indexes columns,
+         not expressions. Source: 0005_auth_users_email_normalized. -->
+
+    <changeSet id="0002-02-index-uq-t-users-email-normalized" author="uwords" dbms="postgresql">
+        <sql>
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_t_users_email_normalized
+            ON auth.t_users (lower(btrim(email)))
+        </sql>
+        <rollback>DROP INDEX IF EXISTS auth.uq_t_users_email_normalized</rollback>
+    </changeSet>
+
+</databaseChangeLog>

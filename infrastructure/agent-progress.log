@@ -1,0 +1,128 @@
+[17:32:29] [red-agent:API-1.3] START: API-1.3 ASCII token of max length passes validation
+[17:32:33] [red-agent:API-2.3] START: Ротация не затрагивает соседние сессии (acceptance)
+2026-09-14T11:32:35Z [red-agent:API-2.2] START acceptance red for API-2.2
+[17:32:42] [red-agent:INTG-1.2] START: INTG-1.2 conditional write single concurrent winner
+[17:32:48] [red-agent:SEC-1.1] START: acceptance red for SEC-1.1 invalid rotation request
+[17:32:51] [red-agent:SEC-2.1] START: SEC-2.1 refresh token changes only its own session
+[17:32:54] [red-agent:SEC-2.2] START: Security 2.2 Недоступная и отсутствующая сессии неразличимы снаружи
+[17:32:56] [red-agent:SEC-3.1] START: SEC-3.1 new access token alg and claims
+[17:32:59] [red-agent:INTG-1.3] START: acceptance 1.3 lost success response must not allow second rotation
+[17:33:02] [red-agent:INFRA-1.1] START: acceptance — 1.1 Отказ хранилища откатывает ротацию целиком
+[17:33:03] [red-agent:API-1.1] START: API 1.1 invalid refresh request rejected without session change
+[17:33:03] [red-agent:INFRA-1.2] START: INFRA-1.2 token issue failure does not start rotation
+2026-09-14T11:33:05Z [red-agent:INFRA-2.1] START acceptance red for INFRA-2.1 (Story 5)
+[17:33:07] [red-agent:INFRA-1.3] START: Infra 1.3 rotation failures have safe operational signals
+[17:33:30] [red-agent:API-3.1] START: acceptance RED for 3.1 Недействительные refresh-токены неразличимы снаружи
+[17:33:33] [red-agent:INFRA-2.2] START: Infra 2.2 connection release on every refresh outcome
+[17:33:41] [red-agent:INFRA-1.2] SKIP: INFEASIBLE_AT_ACCEPTANCE — signer failure has no black-box lever
+[17:33:41] [red-agent:INFRA-1.2] DONE: no files written
+[17:33:50] [red-agent:INFRA-1.3] SKIP: INFEASIBLE_AT_ACCEPTANCE — needs port fault injection + log capture, HTTP-only suite
+[17:33:50] [red-agent:INFRA-1.3] DONE: no files written
+[17:34:08] [red-agent:API-3.3] START: Один refresh-токен выигрывает только одну конкурентную ротацию (acceptance)
+[17:34:13] [red-agent:SEC-3.2] START: Security 3.2 «Ответы и журналы не раскрывают токены и внутренние детали» (acceptance)
+[17:34:16] [red-agent:API-2.3] PREDICT: expect ALREADY_GREEN — rotation is row-scoped, neighbors untouched
+[17:34:18] [red-agent:SEC-3.1] PREDICT: all 3 cases pass (JwtAccessTokenIssuer HS256, 5 claims) -> ALREADY_GREEN
+17:34:21 [red-agent:API-2.2] PREDICT: all 3 cases pass (ALREADY_GREEN) — RefreshSessionTokensService.refresh + SessionPolicy.truncate already derive both deadlines from one truncated now
+[2026-09-14T11:34:30Z] [red-agent:INFRA-2.3] START acceptance red for INFRA-2.3
+[17:34:31] [red-agent:API-3.2] START: acceptance «3.2 Срок сессии имеет строгую границу истечения» (harvest batch)
+17:34:31 [red-agent:API-2.2] RUN: TestRotationDeadlinesAcceptance targeted
+17:34:46 [red-agent:API-2.2] DONE: ALREADY_GREEN 3/3 passed — test_rotation_deadlines_acceptance.py, rotation_deadlines_statements.py, rotation_deadlines_fixtures.py, conftest.py (+1 line)
+[17:34:48] [red-agent:API-1.3] PREDICT: test passes (ALREADY_GREEN) — 512-byte ASCII passes RefreshToken.of, unknown → 401
+[17:34:49] [red-agent:INTG-1.3] PREDICT: all 3 cases pass (ALREADY_GREEN) — replay refused 401, row/pair untouched
+[17:34:49] [red-agent:SEC-1.3] START: SQL-метасимволы как неизвестный refresh-токен (acceptance)
+[17:34:57] [red-agent:INTG-1.2] PREDICT: both cases pass (ALREADY_GREEN) — conditional UPDATE in SessionRepository already decides one winner
+[17:34:59] [red-agent:INTG-1.3] RUN: pytest -k TestLostRotationResponseAcceptance
+[17:35:00] [red-agent:API-3.1] PREDICT: both cases ALREADY_GREEN — RefreshSessionTokensService maps expired/unknown/used to one Unauthorized.of(SESSION) → identical 401 envelope, rows untouched
+[17:35:01] [red-agent:SEC-3.1] RUN: 3 passed, 0 failed, 0 skipped -> ALREADY_GREEN
+[17:35:01] [red-agent:SEC-3.1] DONE: test_access_token_algorithm_and_claims_acceptance.py + statements + fixture
+[17:35:06] [red-agent:API-2.3] RUN: launching TestNeighborSessionIsolationAcceptance
+[17:35:12] [red-agent:API-1.3] RUN: 1 passed (x2) — ALREADY_GREEN, prediction matched
+[17:35:12] [red-agent:API-1.3] DONE: test_max_length_refresh_token_acceptance.py + statements/fixtures, kept enabled
+[17:35:12] [red-agent:SEC-2.2] PREDICT: both cases pass (ALREADY_GREEN) — RefreshSessionTokensService.requireActiveSession maps expired/used/unknown tokens to the same Unauthorized(SESSION) 401 envelope, no row touched
+[17:35:14] [red-agent:API-3.3] PREDICT: all 3 cases pass — conditional UPDATE rowcount already decides the race (ALREADY_GREEN)
+[17:35:18] [red-agent:API-3.1] RUN: running TestIndistinguishableRefreshRefusalAcceptance
+[17:35:20] [red-agent:INTG-1.3] DONE: ALREADY_GREEN 3/3 — test_lost_rotation_response_acceptance.py + statements + fixture
+[17:35:32] [red-agent:SEC-3.2] PREDICT: 3 cases (validation CRLF, validation overlong, unauthorized unknown) — all pass as written: RefreshToken.of -> 400 VALIDATION_FAILED «Refresh token is not valid» {}, Unauthorized.of(SESSION) -> unified 401; sentinel never echoed
+[17:35:32] [red-agent:SEC-1.3] PREDICT: both cases pass (ALREADY_GREEN) — 401 unified, rows untouched
+[17:35:35] [red-agent:SEC-2.1] PREDICT: case1 passes (rotation isolated); case2 AssertionError 400 expected got 200 (ignoreUnknown)
+[17:35:37] [red-agent:INFRA-1.1] PREDICT: case 1 AssertionError 'must answer 503, got 500 with body None' (rotateRefreshToken does not translate the statement-timeout failure); cases 2-3 ALREADY_GREEN
+[17:35:41] [red-agent:SEC-3.2] RUN: test-acceptance.sh -k TestRotationFailureDisclosureAcceptance
+[17:35:44] [red-agent:API-3.2] PREDICT: all 3 cases pass (ALREADY_GREEN) — SessionRepository 'expiresAt > :now' + RefreshSessionTokensService already enforce the inclusive boundary
+[17:35:48] [red-agent:SEC-2.2] RUN: infrastructure/scripts/test-acceptance.sh -k TestSessionRefusalIndistinguishabilityAcceptance
+[17:35:56] [red-agent:SEC-3.2] DONE: ALREADY_GREEN 3/3 — files tests/backend/security/test_rotation_failure_disclosure_acceptance.py, statements/rotation_failure_disclosure_statements.py
+[17:35:56] [red-agent:API-3.2] RUN: targeted pytest -k TestSessionExpiryBoundaryAcceptance
+[17:35:57] [red-agent:INFRA-1.1] RUN: test-acceptance.sh -k TestStorageFailureRollbackAcceptance
+[17:35:57] [red-agent:SEC-1.3] RUN: 2 passed, 0 failed — ALREADY_GREEN
+[17:35:57] [red-agent:SEC-1.3] DONE: test_sql_metacharacter_token_acceptance.py + statements + fixture (enabled)
+[17:36:01] [red-agent:SEC-2.2] DONE: ALREADY_GREEN — 2 passed; created statements/session_refusal_indistinguishability_statements.py, tests/backend/security/test_session_refusal_indistinguishability_acceptance.py; appended fixture to fixtures/security_fixtures.py
+[17:36:02] [red-agent:API-1.1] PREDICT: all 3 cases pass (400 VALIDATION_FAILED already wired) -> ALREADY_GREEN
+[17:36:03] [red-agent:API-3.3] RUN: 3 passed (twice) — ALREADY_GREEN, prediction matched
+[17:36:03] [red-agent:API-3.3] DONE: test_concurrent_rotation_acceptance.py + concurrent_rotation_statements.py (enabled, ALREADY_GREEN)
+[17:36:05] [red-agent:SEC-2.1] RUN: case1 passed, case2 AssertionError 400 expected got 200 — matches prediction
+[17:36:08] [red-agent:INFRA-2.2] PREDICT: passes — refresh releases Hikari conn on 200/401 (ALREADY_GREEN)
+[17:36:09] [red-agent:API-3.1] RUN: 2 passed, 0 failed — ALREADY_GREEN on both cases
+[17:36:09] [red-agent:API-3.1] DONE: created wire_refusal_dto.py, refresh_refusal_client.py, indistinguishable_refresh_refusal_statements.py, session_refusal_fixtures.py, test_indistinguishable_refresh_refusal_acceptance.py; conftest.py +1 plugin line; verdict ALREADY_GREEN
+[17:36:12] [red-agent:API-3.2] DONE: ALREADY_GREEN 3/3 — tests/backend/auth/test_session_expiry_boundary_acceptance.py, statements/session_expiry_boundary_statements.py, fixtures/session_expiry_boundary_fixtures.py, conftest.py (+1 plugin line)
+[17:36:14] [red-agent:SEC-2.1] DONE: RED (1 green, 1 skipped) — test_refresh_token_session_isolation_acceptance.py
+[17:36:15] [red-agent:SEC-1.1] PREDICT: 6 forbidden-field cases 200 instead of 400; 4 hostile-token cases already 400
+[17:36:17] [red-agent:API-1.1] RUN: TestRefreshRequestValidationAcceptance
+[17:36:17] [red-agent:API-2.3] RUN: 1 passed in 62s — ALREADY_GREEN, prediction matched
+[17:36:17] [red-agent:API-2.3] DONE: test_neighbor_session_isolation_acceptance.py + statements + fixtures (enabled)
+[17:36:18] [red-agent:INFRA-2.2] RUN: TestTokenRefreshConnectionReleaseAcceptance targeted
+[17:36:30] [red-agent:INTG-1.2] RUN: rerun after rename (sibling overwrote test_concurrent_rotation_acceptance.py)
+[17:36:34] [red-agent:INFRA-2.2] DONE: ALREADY_GREEN — 1 case passes; 3 new files, 2 edited
+[17:36:37] [red-agent:API-1.1] RUN: 3 passed 0 failed 0 skipped -> ALREADY_GREEN
+[17:36:37] [red-agent:API-1.1] DONE: 4 new files + conftest line, test kept enabled (ALREADY_GREEN)
+[17:36:38] [red-agent:SEC-1.1] RUN: test-acceptance.sh -k TestRotationRequestBoundaryAcceptance
+17:36:44 [red-agent:INFRA-2.1] PREDICT absent/empty/zero/negative TTL cases pass (@Positive + ${VAR:0} default names the variable); fractional: exit 1 but NumberFormatException message lacks variable -> AssertionError 'сообщение не называет переменную'; overflow (Instant.MAX-now+1): boot exits 0 -> AssertionError 'приложение стартовало'
+17:36:44 [red-agent:INFRA-2.1] RUN infrastructure/scripts/test-acceptance.sh -k TestTokenConfigurationBootAcceptance
+[17:36:44] [red-agent:INFRA-1.1] DONE: RED (1 skipped, 2 green) — statements/session_row_lock.py, statements/storage_failure_rollback_statements.py, tests/backend/infrastructure/test_storage_failure_rollback_acceptance.py
+[17:36:49] [red-agent:INTG-1.2] RUN: 2/2 cases pass — ALREADY_GREEN, no skip marker
+[17:36:49] [red-agent:INTG-1.2] DONE: test_conditional_write_single_winner_acceptance.py + statements/fixtures/client/dto
+[17:36:55] [red-agent:SEC-1.1] DONE: RED 6 forbidden-field cases skipped, 4 token cases green; 3 new files
+17:37:35 [red-agent:INFRA-2.1] PREDICT revised: fractional TTL cases PASS — Spring FailureAnalysisReporter prints origin placeholder ${ACCESS_TOKEN_TTL_SECONDS:0}, so the variable is named; only the two overflow cases stay RED
+17:37:35 [red-agent:INFRA-2.1] RUN re-run TestTokenConfigurationBootAcceptance after prediction update
+[17:37:39] [red-agent:INFRA-2.3] PREDICT: session-deadline case AssertionError (row expiry truncated to whole second); access-deadline case passes
+[17:37:53] [red-agent:INFRA-2.3] RUN: 1 failed (row expiry truncated to whole second), 1 passed — prediction matched
+[17:37:56] [red-agent:INFRA-2.3] DONE: RED — ttl_fraction statements/fixture/test created, row-deadline case skipped
+17:39:03 [red-agent:INFRA-2.1] DONE created test_token_configuration_boot_acceptance.py + token_configuration_boot_statements.py, fixture appended; 6 cases green, 2 overflow cases RED and skipped
+17:39:31 [harvest] RUN full acceptance suite over the harvest batch
+17:46:01 [harvest] RUN full suite 173 passed / 30 skipped; green=14 red=5 infeasible=2; baseline b4e9f8e boot
+17:47:45 [harvest] PASS baseline b4e9f8e: 40/40 running-app cases RED (500 UnsupportedOperationException skeleton) → earned; 6 JVM-probe cases GREEN → pre-existing AuthTokenProperties (c147613)
+17:49:57 [harvest] DONE kept=19 classes, [S]=14 scenarios, deleted=0; commit b3523a1 — refactor detectors + boundary reviews dispatched
+[17:50:19] [refactor-mechanics-agent] START: cluster M, 63 acceptance files from b3523a1
+[17:50:28] [refactor-design-agent] START: cluster D — acceptance files of b3523a1 (statements/fixtures/clients)
+[17:50:37] [refactor-duplication-agent] START: cluster T — 63 acceptance files from b3523a1 (Story 5 harvest)
+2026-09-14T11:50:46Z [agent-review] START range=b3523a1 (Story 5 harvest boundary)
+2026-09-14T11:51:01Z [premortem] START range b3523a1 (Story 5 harvest)
+[17:54:45] [refactor-duplication-agent] SCAN: cluster T — 34 candidates across 63 harvest files (b3523a1)
+[17:54:45] [refactor-duplication-agent] DONE: cluster T read-only pass, table returned, nothing edited
+[17:54:59] [refactor-design-agent] SCAN: 21 candidates (A4/A6/A7/A7b/A49/B2/B5/B6/B7); A3/A12/A13/A46-48/A57/A35/A56/A33-44/B1/B3/B4/B8/B9 none; A50 fixture ctor group NO ACTION (restraint)
+[17:54:59] [refactor-design-agent] DONE: cluster D table returned (read-only, no edits)
+[17:55:43] [refactor-mechanics-agent] SCAN: 34 candidates (A1/A45 long asserting methods, A32 nested dependency calls in DTO ctors, A2 double loops, A8/A30/A11 minor); tests/ clean
+[17:55:43] [refactor-mechanics-agent] DONE: cluster M table returned, no edits
+2026-09-14T11:57:35Z [premortem] DONE range b3523a1 verdict=CONCERNS credible=4 (2 SAFE, 1 NEEDS_CYCLE, 1 NEEDS_CLARIFICATION)
+2026-09-14T11:58:11Z [agent-review] DONE range b3523a1 verdict=CONCERNS concerns=5 (5 SAFE, 0 NEEDS_CYCLE) + 5 NO_FIX
+[17:59:12] [refactor-agent] START: acceptance/ harvest batch (b3523a1), serial fixer
+[18:03:37] [refactor-agent] FIX: drop RotationOutcomeDto + SessionRotationRaceClient, reuse AuthClient (2 passed)
+[18:05:41] [refactor-agent] FIX: fold 3 refusal clients + WireRefusalDto into AuthClient/SessionRefusalDto (21 passed)
+[18:06:19] [refactor-agent] FIX: pull _nested_object up to ApplicationClient (4 passed)
+[18:07:41] [refactor-agent] FIX: centralize HTTP_BAD_REQUEST/VALIDATION_FAILED/ERROR_ENVELOPE_FIELDS/MAX_TOKEN_BYTES/ROTATED_TOKEN (34 passed)
+[18:08:59] [refactor-agent] FIX: extract assert_validation_refusal/assert_error_envelope_shape into wire_contract (11 passed)
+[18:09:29] [refactor-agent] FIX: disclosure refresh_with uses AuthClient refusal, labels moved into sentinels (3 passed)
+[18:10:11] [refactor-agent] FIX: boundary _attempt uses AuthClient refusal, BoundaryAttempt split into HostileRefresh (4 passed)
+[18:12:23] [refactor-agent] FIX: assert_stored_row_unchanged in stored_session_row.py reused in 11 Statements (25 passed)
+[18:14:36] [refactor-agent] FIX: assert_row_stores_rotation module helper reused in 5 rotation Statements (9 passed)
+[18:15:12] [refactor-agent] FIX: rotation_deadlines delegates to assert_access_token_issued_for; expiry_of_token helper (7 passed)
+[18:18:35] [refactor-agent] FIX: segment_of/header_of into access_token, assert_id_claim_is_uuid shared (8 passed)
+[18:19:03] [refactor-agent] FIX: drop redundant body-is-not-None guard in indistinguishable refusal (2 passed)
+[18:20:22] [refactor-agent] FIX: isolation reuses LiveStoredSession, drops OwnedSession and dead email (1 passed)
+[18:20:40] [refactor-agent] FIX: concurrent race timestamps use datetime.now(UTC) (3 passed)
+[18:21:41] [refactor-agent] FIX: conditional-write Statements delegate to ConcurrentRotationStatements, one RotationRace (5 passed)
+[18:22:25] [refactor-agent] FIX: AuthClient start_challenge split into _challenge_of, payload locals inlined (9 passed)
+[18:23:26] [refactor-agent] FIX: refusal-indistinguishability envelope check via assert_error_envelope_shape (2 passed)
+[18:23:37] [refactor-agent] FIX: ttl_fraction given_live_session delegates directly (1 passed)
+[18:24:18] [refactor-agent] FIX: SessionTokenSearch folded into SessionLookupDatabase, own asyncpg connect dropped (5 passed)
+[18:24:39] [refactor-agent] RUN: full acceptance suite started
+[18:30:58] [refactor-agent] RUN: full acceptance suite 173 passed, 30 skipped
+[18:30:58] [refactor-agent] DONE: 19 refactorings applied in acceptance/, ruff clean, max 200 lines

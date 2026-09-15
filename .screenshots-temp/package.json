@@ -1,0 +1,7 @@
+{
+  "name": "mockup-screenshots",
+  "private": true,
+  "type": "module",
+  "scripts": { "shot": "node take-screenshots.js" },
+  "dependencies": { "puppeteer": "^24.0.0" }
+}

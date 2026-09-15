@@ -1,0 +1,56 @@
+---
+name: test-review
+description: Review tests for strict assertions and complete omitted validation. Use when the user wants to improve test assertions or mentions /test-review.
+---
+
+# /test-review - Improve Test Assertions
+
+## Usage
+
+- `/test-review` — review all tests
+- `/test-review {TestTarget}` — review one test target
+
+## Available Templates
+
+| Template | Purpose |
+|----------|---------|
+| `.claude/templates/testing/test-review-patterns.md` | Universal rules, anti-pattern catalog, assertion rules |
+| `.claude/tech/{backend}/templates/testing/test-review-usecase.md` | Usecase test patterns (Statements purity, 3-tier DSL) |
+| `.claude/tech/{backend}/templates/testing/test-review-rest.md` | REST controller test patterns (mock matching) |
+| `.claude/tech/{backend}/templates/testing/test-review-storage.md` | Persistence test patterns |
+| `.claude/tech/{backend}/templates/testing/test-review-acceptance.md` | Acceptance test patterns (HTTP response assertions) |
+| `.claude/tech/{backend}/templates/testing/test-review-other.md` | Selenium, email, scheduling, security patterns |
+| `.claude/tech/{bot}/tdd.md` | Bot logic, API-client, handler, and isolated E2E patterns |
+
+## Workflow
+
+Scatter–gather: **parallel read-only detectors** find violations, then a **single
+serial fixer** applies them. The detectors never edit — only the fixer writes, one
+file at a time — so there are no concurrent writes to shared Statements files.
+
+1. **Determine the test's layer** (usecase / rest / storage / acceptance / selenium /
+   bot-logic / bot-api / bot-handler / bot-acceptance) —
+   this selects the tech file each detector loads and whether the selenium
+   detector runs.
+2. **Dispatch the detectors concurrently and await all of them** — start every
+   named agent before awaiting results, then gather every result. No dispatch is
+   detached or fire-and-forget: step 3 requires the complete result set.
+   Each runs only its cluster of `.claude/templates/workflow/test-review-checklist.md`
+   and returns a findings table:
+   - `test-review-assertions-agent` — cluster A (assertion strictness)
+   - `test-review-placement-agent` — cluster P (test-class vs Statements placement)
+   - `test-review-statements-agent` — cluster S (Statements internal quality)
+   - `test-review-selenium-agent` — cluster Se — **only for selenium/frontend tests**; skip for backend and bot tests.
+3. **Gather + fix:** hand all findings to `.claude/agents/test-review-agent.md`
+   (the serial fixer). It merges, dedups, applies fixes one file at a time, and
+   prints the filled `test-review-output-format.md`. It runs `/test-runner` unless
+   Stage 2 production work is concurrent; in that case the coordinator runs the
+   joined test and implementation.
+
+### Small-file shortcut
+
+If the target test is small with very few assertions, skip the fan-out and run a
+single `test-review-agent` pass over the whole checklist — the detector
+orchestration + merge overhead can exceed the single-agent cost on tiny files.
+Await that one dispatch too. This pass both finds and fixes, so an unawaited call
+could report the review done before a single assertion has been tightened.

@@ -1,0 +1,151 @@
+openapi: 3.0.3
+info:
+  title: Обновление токенов сессии
+  version: 1.0.0
+  description: >-
+    Атомарно ротирует refresh-токен существующей сессии, продлевает её скользящий
+    срок и выпускает новый access-JWT. Новая строка сессии не создаётся.
+
+paths:
+  /api/v1/auth/token/refresh:
+    post:
+      summary: Ротировать refresh-токен и выпустить новый access-токен
+      operationId: refreshAuthSession
+      tags:
+        - auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRefreshRequest'
+      responses:
+        '200':
+          description: >-
+            Токен принят. Существующая сессия сохранила id, получила новый
+            refreshToken и новый accessToken; старый refreshToken больше не действует.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionRefreshResponse'
+        '400':
+          description: >-
+            VALIDATION_FAILED — тело отсутствует или не является JSON; refreshToken
+            отсутствует, null, пустой, содержит символ вне печатного ASCII или длиннее
+            512 байт; либо тело содержит любое свойство кроме refreshToken. Ни одна
+            сессия не изменяется.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: >-
+            UNAUTHORIZED — refreshToken истёк, неизвестен, уже использован или проиграл
+            конкурентную ротацию. Все случаи возвращают одинаковые статус, code,
+            message и payload; ни причина, ни токен не раскрываются. Сессия не меняется,
+            а новая пара победившего запроса остаётся действительной.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: >-
+            UNAVAILABLE — база данных недоступна или транзакция не зафиксировалась.
+            refresh_token и expires_at откатываются вместе, поэтому старый токен
+            остаётся действительным и запрос можно повторить.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    SessionRefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      additionalProperties: false
+      description: >-
+        Для обновления не нужен accessToken. id, userId, status, expires_at и любые
+        другие серверные поля запрещены и дают VALIDATION_FAILED.
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 512
+          pattern: '^[\x20-\x7E]+$'
+          description: >-
+            Непрозрачное значение из ранее выданной сессии. Только печатный ASCII;
+            поэтому maxLength 512 одновременно является границей в байтах. Значение
+            сравнивается параметризованным запросом и никогда не журналируется.
+          example: 0e7f1b0e3f7c4a1d8b2e5c9a6d3f8b04c1a7e2d5
+
+    SessionRefreshResponse:
+      type: object
+      required:
+        - session
+      additionalProperties: false
+      properties:
+        session:
+          $ref: '#/components/schemas/RotatedSession'
+
+    RotatedSession:
+      type: object
+      required:
+        - id
+        - refreshToken
+        - accessToken
+      additionalProperties: false
+      description: >-
+        Та же строка auth.t_sessions: id не меняется, новая строка не создаётся.
+        Сессии того же или другого пользователя не затрагиваются.
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: >-
+            Новое непрозрачное случайное значение. Срок сессии равен моменту ротации
+            плюс REFRESH_TOKEN_TTL_SECONDS; expiresAt наружу не возвращается.
+          example: 1f8a2c1f4a8d4be18fbd5ec72da6c7bb93ce9c67
+        accessToken:
+          type: string
+          minLength: 1
+          description: >-
+            Новый JWT HS256 с прежними sub=user.id и sid=session.id и новым
+            exp = момент ротации плюс ACCESS_TOKEN_TTL_SECONDS.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZmE4NWY2NCJ9.signature
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+        - payload
+      additionalProperties: false
+      description: >-
+        Существующий конверт adapter_rest.exception_handlers. Не содержит токен,
+        причину auth-отказа, stack trace, SQL, внутренние классы или пути.
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - UNAUTHORIZED
+            - UNAVAILABLE
+          example: UNAUTHORIZED
+        message:
+          type: string
+          description: >-
+            Для истёкшего, неизвестного, использованного и проигравшего гонку токена
+            значение побайтно одинаково.
+          example: Refresh token is invalid or expired
+        payload:
+          type: object
+          additionalProperties: true
+          example: {}

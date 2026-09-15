@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env.local
+.env.*.local
+infrastructure/.env
+infrastructure/run/
+infrastructure/logs/
+e2e/build/
+e2e/.gradle/
+*.tsbuildinfo

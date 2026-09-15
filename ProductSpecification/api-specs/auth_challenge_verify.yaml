@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: Проверка кода challenge
+  version: 1.0.0
+  description: >-
+    Проверяет код живого challenge и выдаёт сессию. Email и тип challenge читаются из
+    сохранённого challenge, а не из запроса, поэтому клиент не может их подменить.
+    Неизвестный email регистрируется здесь — не на start.
+
+paths:
+  /api/v1/auth/challenge/verify:
+    post:
+      summary: Проверить код challenge и выдать сессию
+      operationId: verifyAuthChallenge
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeVerifyRequest'
+      responses:
+        '200':
+          description: >-
+            Код принят. Challenge погашен, сессия выдана. Повторный вызов с тем же
+            challengeId и code внутри окна повтора (по умолчанию 60 с, но не дольше, чем
+            осталось до expiresAt) возвращает тот же самый session.id и refreshToken и
+            заново подписанный accessToken — вторая сессия не выдаётся никогда.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeVerifyResponse'
+        '400':
+          description: >-
+            VALIDATION_FAILED — challengeId отсутствует, null или не UUID; либо code
+            отсутствует, null, пустой или состоит не ровно из 6 ASCII-цифр (U+0030–U+0039).
+            Иные формы цифр отвергаются здесь и не расходуют попытку.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: >-
+            UNAUTHORIZED — код неверен, либо challenge истёк / неизвестен / исчерпан /
+            вытеснен новым. Неизвестный challengeId сообщается ровно так же, как истёкший —
+            тот же статус, тот же код, то же сообщение, — поэтому эндпоинт нельзя
+            использовать для разведки. Остаток попыток наружу не отдаётся. С этим ответом не
+            идёт ни строка сессии, ни строка пользователя, ни токен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: >-
+            UNAVAILABLE — отказало хранилище challenge или транзакция базы данных. Ни одна
+            строка t_users, t_auth или t_sessions не записана, запись о повторе не создана;
+            ошибка допускает повтор запроса. При этом погашенный код всё равно потрачен —
+            verify гасит challenge до работы с базой, это осознанный размен.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ChallengeVerifyRequest:
+      type: object
+      required:
+        - challengeId
+        - code
+      additionalProperties: true
+      description: >-
+        Неизвестные свойства игнорируются, а не отвергаются. Ни email, ни challengeType
+        здесь не принимаются — оба восстанавливаются из сохранённого challenge, поэтому
+        клиент не может предъявить код одного challenge от имени другой личности.
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          minLength: 6
+          maxLength: 6
+          description: >-
+            Ровно 6 ASCII-цифр. Ведущий ноль значим: 012345 — это валидный код, а не число
+            12345. Сравнивается за постоянное время по всем шести цифрам.
+          example: '123456'
+
+    ChallengeVerifyResponse:
+      type: object
+      required:
+        - user
+        - session
+      properties:
+        user:
+          $ref: '#/components/schemas/VerifiedUser'
+        session:
+          $ref: '#/components/schemas/IssuedSession'
+
+    VerifiedUser:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: >-
+            Существующая строка auth.t_users для email этого challenge либо строка,
+            созданная этим вызовом verify. Авторегистрация пишет name='' и не создаёт ни
+            строку профиля, ни строку онбординга.
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+    IssuedSession:
+      type: object
+      required:
+        - id
+        - refreshToken
+        - accessToken
+      description: >-
+        У пользователя может быть много одновременных сессий; успешный verify всегда
+        вставляет новую строку auth.t_sessions. userId здесь не дублируется — он лежит
+        рядом, в user.id.
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        refreshToken:
+          type: string
+          description: >-
+            Непрозрачное случайное значение, хранится в auth.t_sessions.refresh_token.
+            Единственный источник правды — строка в базе; сам токен не несёт читаемых
+            утверждений. Живёт 1 год, срок записан в expires_at. Ротация и логаут — отдельные
+            истории.
+          example: 0e7f1b0e3f7c4a1d8b2e5c9a6d3f8b04c1a7e2d5
+        accessToken:
+          type: string
+          description: >-
+            JWT HS256 с sub=user.id, sid=session.id и exp = момент выдачи плюс настроенное
+            время жизни access-токена (по умолчанию 1800 с). Подписывается секретом из
+            конфигурации, у которого нет рабочего значения по умолчанию в репозитории.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZmE4NWY2NCJ9.signature
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+        - payload
+      description: >-
+        Отгруженный конверт ошибки (adapter_rest.exception_handlers). Никогда не несёт код
+        подтверждения, секрет подписи, refresh-токен, стек вызовов, текст SQL, имя
+        ограничения, имя класса или путь к файлу.
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - UNAUTHORIZED
+            - UNAVAILABLE
+          example: UNAUTHORIZED
+        message:
+          type: string
+          example: Invalid code
+        payload:
+          type: object
+          additionalProperties: true
+          example: {}

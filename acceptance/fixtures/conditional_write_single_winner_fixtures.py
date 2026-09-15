@@ -1,0 +1,10 @@
+import pytest
+from statements.concurrent_rotation_statements import ConcurrentRotationStatements
+from statements.conditional_write_single_winner_statements import ConditionalWriteSingleWinnerStatements
+
+
+@pytest.fixture
+def conditional_write_single_winner_statements(
+    concurrent_rotation_statements: ConcurrentRotationStatements,
+) -> ConditionalWriteSingleWinnerStatements:
+    return ConditionalWriteSingleWinnerStatements(concurrent_rotation_statements)

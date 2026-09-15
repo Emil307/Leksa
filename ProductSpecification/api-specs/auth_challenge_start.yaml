@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: Старт challenge аутентификации
+  version: 1.0.0
+  description: >-
+    Создаёт challenge для входа без пароля. Для challengeType EMAIL_CODE сервер генерирует
+    6-значный код, сохраняет challenge под ключом уникальности стратегии (нормализованный
+    email) и отправляет код письмом. Ответ одинаков для известного и неизвестного email —
+    по нему нельзя узнать, зарегистрирован ли пользователь.
+
+paths:
+  /api/v1/auth/challenge/start:
+    post:
+      summary: Создать challenge для входа и отправить 6-значный код письмом
+      operationId: startAuthChallenge
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeStartRequest'
+      responses:
+        '200':
+          description: >-
+            Challenge создан, код отправлен. Предыдущий живой challenge с тем же ключом
+            уникальности с этого момента мёртв.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChallengeStartResponse'
+        '400':
+          description: >-
+            VALIDATION_FAILED — email отсутствует, null, пустой, длиннее 254 октетов или не
+            является почтовым адресом по RFC; либо challengeType отсутствует, null, пустой
+            или вне перечисления (отсутствующее значение никогда не подставляется
+            единственным членом перечисления). Письмо не отправляется, сохранённый
+            challenge не затрагивается.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: >-
+            CONFLICT — кулдаун повторной отправки в 60 секунд для этого ключа уникальности
+            ещё взведён. Письмо не отправляется, ранее доставленный код остаётся рабочим, и
+            сам отказ кулдаун не продлевает.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CooldownError'
+        '503':
+          description: >-
+            UNAVAILABLE — не удалась отправка письма или запись challenge в хранилище. Новый
+            challenge и кулдаун освобождаются, поэтому немедленный повтор start принимается
+            и доставляет рабочий код. Ответ не несёт ни стека вызовов, ни текста SQL, ни
+            имени класса.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ChallengeType:
+      type: string
+      enum:
+        - EMAIL_CODE
+      description: >-
+        Выбирает стратегию challenge. TG и OAUTH — явные не-цели истории 01, их нет в
+        перечислении, пока не появятся их стратегии.
+
+    ChallengeStartRequest:
+      type: object
+      required:
+        - email
+        - challengeType
+      additionalProperties: true
+      description: >-
+        Неизвестные свойства игнорируются, а не отвергаются. Серверные поля, присланные
+        здесь (challengeId, expiresAt, code, status, userId, name, provider), на результат
+        не влияют — всегда побеждает значение, сгенерированное сервером.
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: >-
+            Не более 254 **октетов** — длина проверяется до применения шаблона адреса,
+            поэтому патологический адрес не может раскрутить стоимость проверки шаблона.
+            Нормализуется (NFC + приведение к нижнему регистру без учёта локали) перед
+            использованием как ключ уникальности, при хранении и при сравнении, поэтому
+            User@Example.COM и user@example.com — одна личность. maxLength здесь —
+            приближение средствами OpenAPI; авторитетна граница в октетах.
+          example: user@example.com
+        challengeType:
+          $ref: '#/components/schemas/ChallengeType'
+
+    ChallengeStartResponse:
+      type: object
+      required:
+        - challengeId
+        - challengeType
+        - expiresAt
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+          description: >-
+            Единственная ручка к живому challenge. Состояние на стороне клиента — его
+            потеря оставляет пользователя ни с чем до истечения кулдауна (принятое
+            ограничение, см. заметки истории 01).
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        challengeType:
+          $ref: '#/components/schemas/ChallengeType'
+        expiresAt:
+          type: string
+          format: date-time
+          description: >-
+            Момент времени в UTC, когда challenge умирает. Равен моменту создания плюс
+            настроенное время жизни (по умолчанию 300 с); хранится в записи challenge, а не
+            выводится из остатка TTL. Ни один код не может быть предъявлен после этого
+            момента.
+          example: '2026-08-03T11:40:01.161Z'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+        - payload
+      description: >-
+        Отгруженный конверт ошибки (adapter_rest.exception_handlers). Никогда не несёт код
+        подтверждения, секрет подписи, refresh-токен, стек вызовов, текст SQL, имя
+        ограничения, имя класса или путь к файлу.
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - CONFLICT
+            - UNAVAILABLE
+          example: VALIDATION_FAILED
+        message:
+          type: string
+          example: Email is not a valid address
+        payload:
+          type: object
+          additionalProperties: true
+          example: {}
+
+    CooldownError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            payload:
+              type: object
+              required:
+                - retryAfterSeconds
+              properties:
+                retryAfterSeconds:
+                  type: integer
+                  minimum: 1
+                  description: >-
+                    Остаток ожидания в целых секундах. Границу 59,9 с / 60,0 с / 60,1 с
+                    определяют и проверяют сценарии этой истории.
+                  example: 42

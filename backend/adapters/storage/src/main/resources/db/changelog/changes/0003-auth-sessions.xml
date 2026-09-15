@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Source: 0001_auth_sessions. user_id carries no foreign key on purpose:
+         sessions predate auth.t_users and a constraint would reject legal rows.
+         varchar(512) is MAX_TOKEN_BYTES, the domain's refresh-token ceiling. -->
+
+    <changeSet id="0003-01-table-t-sessions" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists schemaName="auth" tableName="t_sessions"/></not>
+        </preConditions>
+        <createTable schemaName="auth" tableName="t_sessions">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="t_sessions_pkey" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="refresh_token" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0003-02-index-ix-t-sessions-user-id" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists schemaName="auth" indexName="ix_t_sessions_user_id"/></not>
+        </preConditions>
+        <createIndex schemaName="auth" tableName="t_sessions" indexName="ix_t_sessions_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Unique, so a conditional rotation addresses exactly one row. -->
+
+    <changeSet id="0003-03-index-uq-t-sessions-refresh-token" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists schemaName="auth" indexName="uq_t_sessions_refresh_token"/></not>
+        </preConditions>
+        <createIndex schemaName="auth" tableName="t_sessions" indexName="uq_t_sessions_refresh_token" unique="true">
+            <column name="refresh_token"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

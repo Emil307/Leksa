@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Recreates the schema from scratch; there is no baseline to inherit. Each
+         file below is the settled end state of the Alembic revision it names, so
+         the plain UNIQUE that 0002 put on auth.t_users.email and 0005 replaced is
+         never created here - only the functional index that survived. -->
+
+    <include file="db/changelog/changes/0001-schemas.xml"/>
+    <include file="db/changelog/changes/0002-auth-users.xml"/>
+    <include file="db/changelog/changes/0003-auth-sessions.xml"/>
+    <include file="db/changelog/changes/0004-auth-accounts.xml"/>
+    <include file="db/changelog/changes/0005-notifications-outbox.xml"/>
+
+</databaseChangeLog>

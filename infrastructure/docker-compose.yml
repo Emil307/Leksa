@@ -1,0 +1,55 @@
+name: ${COMPOSE_PROJECT_NAME:-uwords-0}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-container-${REPO_INDEX:-0}
+    environment:
+      POSTGRES_DB: ${DB_NAME:-uwords}
+      POSTGRES_USER: ${DB_USER:-uwords}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-uwords}
+    ports:
+      # loopback only: the port exists for the host-run backend, never for the LAN
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-uwords} -d ${DB_NAME:-uwords}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-container-${REPO_INDEX:-0}
+    user: redis
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD:-uwords}
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-uwords}
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog-container-${REPO_INDEX:-0}
+    ports:
+      - "127.0.0.1:${MAIL_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILHOG_HTTP_PORT:-8025}:8025"
+
+volumes:
+  postgres-data:

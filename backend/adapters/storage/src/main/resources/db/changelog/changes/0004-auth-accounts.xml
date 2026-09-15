@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Source: 0004_auth_accounts. Uniqueness is on the pair (provider,
+         provider_id), not on provider_id alone: the same address may later arrive
+         through a different provider. Deleting a user removes the identities that
+         only describe how that user signs in, hence ON DELETE CASCADE. -->
+
+    <changeSet id="0004-01-table-t-auth" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists schemaName="auth" tableName="t_auth"/></not>
+        </preConditions>
+        <createTable schemaName="auth" tableName="t_auth">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="t_auth_pkey" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="t_auth_user_id_fkey"
+                             referencedTableSchemaName="auth"
+                             referencedTableName="t_users"
+                             referencedColumnNames="id"
+                             deleteCascade="true"/>
+            </column>
+            <column name="provider" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_id" type="VARCHAR(254)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="0004-02-index-uq-t-auth-provider-provider-id" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists schemaName="auth" indexName="uq_t_auth_provider_provider_id"/></not>
+        </preConditions>
+        <createIndex schemaName="auth" tableName="t_auth" indexName="uq_t_auth_provider_provider_id" unique="true">
+            <column name="provider"/>
+            <column name="provider_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0004-03-index-ix-t-auth-user-id" author="uwords" dbms="postgresql">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists schemaName="auth" indexName="ix_t_auth_user_id"/></not>
+        </preConditions>
+        <createIndex schemaName="auth" tableName="t_auth" indexName="ix_t_auth_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

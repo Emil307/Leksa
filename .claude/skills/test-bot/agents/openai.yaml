@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Bot"
+  short_description: "Run bot unit and component tests"
+  default_prompt: "Run the requested bot test scope using the repository technology conventions."
