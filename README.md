@@ -1,6 +1,6 @@
-# uwords
+# Leksa
 
-Product monorepo for the uwords API, frontend, and bot. Each application is
+Product monorepo for the Leksa API, frontend, and bot. Each application is
 independently built and deployed, while product stories, tasks, and technology
 decisions live in the shared `ProductSpecification/` directory.
 
